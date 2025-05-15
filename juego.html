@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juego</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #a8edea, #fed6e3);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    h1 {
+      margin-top: 40px;
+      color: #333;
+    }
+    h4 {
+      font-size: 20px;
+      color: #333;
+    }
+    .card {
+      background-color: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      max-width: 700px;
+      width: 90%;
+      text-align: center;
+      margin-bottom: 20px;
+      transition: transform 0.3s ease;
+    }
+    .card:hover {
+      transform: scale(1.02);
+    }
+    .options button {
+      margin: 8px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background-color: #6c757d;
+      color: white;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
+    .options button:hover {
+      background-color: #5a6268;
+    }
+    .options button.correct {
+      background-color: #28a745 !important;
+    }
+    .options button.incorrect {
+      background-color: #dc3545 !important;
+    }
+    .feedback {
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .score {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .progress {
+      font-weight: normal;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    #nextBtn, #restartBtn {
+      margin-top: 15px;
+      padding: 10px 18px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #nextBtn:hover, #restartBtn:hover {
+      background-color: #0069d9;
+    }
+  </style>
+</head>
+<body>
+  <h1>¿Qué elemento del modelo de comunicación es?</h1>
+
+  <div class="score" id="score">Puntaje: 0</div>
+  <div class="progress" id="progress">Pregunta: 0/10 | Correctas: 0 | Incorrectas: 0</div>
+
+  <div class="card" id="card">
+    <h4 id="situation">Cargando situación...</h4>
+    <div class="options" id="options"></div>
+    <div class="feedback" id="feedback"></div>
+    <button onclick="nextCard()" id="nextBtn" style="display:none">Siguiente</button>
+  </div>
+
+  <script>
+    const stage1 = [
+      { text: 'Una persona dice "Hola" por teléfono.', answer: 'Emisor', explanation: 'El emisor es quien inicia la comunicación al enviar el mensaje.' },
+      { text: 'La palabra "Hola" dicha por teléfono.', answer: 'Mensaje', explanation: 'El mensaje es la información que se transmite entre emisor y receptor.' },
+      { text: 'La línea telefónica que transmite la voz.', answer: 'Canal', explanation: 'El canal es el medio físico por el cual viaja el mensaje.' },
+      { text: 'Quien recibe el saludo y responde.', answer: 'Receptor', explanation: 'El receptor es quien interpreta y comprende el mensaje enviado por el emisor.' },
+      { text: 'El idioma español utilizado en la conversación.', answer: 'Código', explanation: 'El código es el sistema de signos (como un idioma) que se usa para codificar y decodificar el mensaje.' },
+      { text: 'Una moto que circula con escape libre y dificulta escuchar bien el mensaje.', answer: 'Ruido', explanation: 'El ruido es toda interferencia que dificulta o altera la transmisión del mensaje.' },
+      { text: 'La oficina donde ocurre la llamada.', answer: 'Contexto', explanation: 'El contexto es el entorno físico, social o situacional en el que ocurre la comunicación.' },
+      { text: 'La respuesta "Hola, ¿cómo estás?"', answer: 'Retroalimentación', explanation: 'La retroalimentación es la respuesta que da el receptor al mensaje recibido.' }
+    ];
+
+    const stage2 = [
+      { text: 'Un perro ladra para ahuyentar a un extraño.', answer: 'Emisor', explanation: 'El perro actúa como emisor al emitir un sonido con intención comunicativa.' },
+      { text: 'El sonido del ladrido de un perro para advertir.', answer: 'Mensaje', explanation: 'El ladrido es el mensaje sonoro que transmite una intención o información.' }
+    ];
+
+    const stage3 = [
+      { text: 'Una señal de tránsito con un pictograma de "No estacionar".', answer: 'Código', explanation: 'El pictograma es un sistema de signos visuales usados para comunicar una norma.' },
+      { text: 'El conductor que interpreta correctamente la señal.', answer: 'Receptor', explanation: 'El conductor recibe e interpreta la señal visual, actuando como receptor.' }
+    ];
+
+    let data;
+    let currentIndex, score, correctCount, incorrectCount;
+
+    function startGame() {
+      const allQuestions = shuffle([...stage1, ...stage2, ...stage3]);
+      data = allQuestions.slice(0, 10);
+      currentIndex = 0;
+      score = 0;
+      correctCount = 0;
+      incorrectCount = 0;
+      document.getElementById('card').innerHTML = `
+        <h4 id="situation"></h4>
+        <div class="options" id="options"></div>
+        <div class="feedback" id="feedback"></div>
+        <button onclick="nextCard()" id="nextBtn" style="display:none">Siguiente</button>
+      `;
+      updateScore();
+      loadCard();
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    const elements = ['Emisor', 'Receptor', 'Mensaje', 'Canal', 'Código', 'Contexto', 'Ruido', 'Retroalimentación'];
+
+    function updateScore() {
+      document.getElementById('score').textContent = `Puntaje: ${score}`;
+      document.getElementById('progress').textContent = `Pregunta: ${currentIndex + 1}/10 | Correctas: ${correctCount} | Incorrectas: ${incorrectCount}`;
+    }
+
+    function loadCard() {
+      if (currentIndex >= data.length) {
+        let calificacion = '';
+        if (correctCount < 6) calificacion = 'Te falta aprender!';
+        else if (correctCount <= 7) calificacion = 'Buen juego!';
+        else if (correctCount <= 9) calificacion = 'Sos un gran jugador!';
+        else calificacion = '¡Ganaste el juego!';
+
+        document.getElementById('card').innerHTML = `
+          <h2>Juego finalizado</h2>
+          <p>Puntaje final: ${score} de 10</p>
+          <p>Respuestas correctas: ${correctCount} | Incorrectas: ${incorrectCount}</p>
+          <h3>${calificacion}</h3>
+          <button id="restartBtn" onclick="startGame()">Volver a jugar</button>
+        `;
+        return;
+      }
+
+      const situation = document.getElementById('situation');
+      const options = document.getElementById('options');
+      const feedback = document.getElementById('feedback');
+      const nextBtn = document.getElementById('nextBtn');
+      const current = data[currentIndex];
+
+      situation.textContent = current.text;
+      options.innerHTML = '';
+      feedback.textContent = '';
+      nextBtn.style.display = 'none';
+
+      elements.forEach(el => {
+        const btn = document.createElement('button');
+        btn.textContent = el;
+        btn.onclick = () => checkAnswer(btn, el, current);
+        options.appendChild(btn);
+      });
+
+      updateScore();
+    }
+
+    function checkAnswer(button, selected, current) {
+      const feedback = document.getElementById('feedback');
+      const buttons = document.querySelectorAll('.options button');
+      const nextBtn = document.getElementById('nextBtn');
+
+      buttons.forEach(btn => btn.disabled = true);
+
+      if (selected === current.answer) {
+        button.classList.add('correct');
+        feedback.textContent = '¡Correcto!';
+        feedback.style.color = '#28a745';
+        score++;
+        correctCount++;
+      } else {
+        button.classList.add('incorrect');
+        feedback.innerHTML = `Incorrecto. La respuesta es: <strong>${current.answer}</strong>.<br><em>${current.explanation}</em>`;
+        feedback.style.color = '#dc3545';
+        incorrectCount++;
+      }
+
+      updateScore();
+      nextBtn.style.display = 'inline-block';
+    }
+
+    function nextCard() {
+      currentIndex++;
+      loadCard();
+    }
+
+    window.onload = startGame;
+  </script>
+</body>
+</html>
